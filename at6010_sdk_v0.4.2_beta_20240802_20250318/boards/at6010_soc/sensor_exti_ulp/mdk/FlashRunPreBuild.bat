@@ -1,0 +1,1 @@
+python  ../../../../tools/scripts/BinFile2HeaderFile.py  out_ramrun/ramrun.bin  ../src/ramrun_image.c  ramrun_image

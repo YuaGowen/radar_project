@@ -1,0 +1,20 @@
+                                说     明
+    ulp（low_power）工程分ramRun和flashRun两个目标，编译时需要先编译ramRun目标，然后再编译flashRun目标。
+
+1.编译ulp工程需要调用bin转数组工具“tools\scripts\BinFile2HeaderFile.exe”，所以在编译相关工程前，需确保该转换工具未被杀毒软件禁用或删除；
+2.编译ramRun目标时将生成out_ramrun\ramrun.bin文件；
+3.编译flashRun目标时将先调用预编译脚本“FlashRunPreBuild.bat”，将“out_ramrun\ramrun.bin”文件转换为“ramrun_image.c”文件，然后再编译生成“out_flashrun\flashrun.bin”文件；
+4.“out_flashrun\flashrun.bin”文件用于最终下载到芯片中运行。
+
+ULP工程工作原理：系统上电首次时运行flashrun.bin，flashrun.bin完成系统初始化并将ramrun.bin释放到SRAM指定空间，然后系统热重启至ramrun.bin，ramrun.bin完成用户的具体业务逻辑后进入超低功耗休眠（shutdown），后续系统定时从休眠中唤醒并重新运行ramrun.bin。
+
+				Notation
+There are two targets(ramRun & flashRun) in ulp(ultra low power) project. Compile ramRun target before flashRun target.
+
+1. "tools\scripts\BinFile2HeaderFile.exe”are used to convert binfile to header file(array) for compiling ulp project. Please make sure this converting tool is not banned or deleted by anti-virus software or FireWall
+2. out_ramrun\ramrun.bin will be generated after compiling ramRun target
+3. run script "FlashRunPreBuild.bat" to convert from "out_ramrun\ramrun.bin" to "ramrun_image.c", then compile and generate "out_flashrun\flashrun.bin"
+4.  download "out_flashrun\flashrun.bin" into chip and run
+
+ULP working principle
+The system runs flashrun.bin when powering up for the first time, flashrun.bin completes the system initialisation and move ramrun.bin to the designated address in SRAM, then the system warm boot to ramrun.bin, which completes the user-specific logic and then enters into ultra-low-power sleep (shutdown), and the system wakes up from sleep and re-runs ramrun.bin at regular intervals.

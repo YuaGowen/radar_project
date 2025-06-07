@@ -1,0 +1,1 @@
+..\..\..\..\tools\scripts\BinFile2HeaderFile.exe  out_ramrun\ramrun.bin  ..\src\ramrun_image.c  ramrun_image

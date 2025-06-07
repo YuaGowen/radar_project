@@ -1,0 +1,19 @@
+./out/radar_cfg_hal.o: ..\src\radar_cfg_hal.c \
+  ..\..\..\..\..\platform\hal\include\hal_radar.h \
+  ..\..\..\..\..\platform\drivers\include\radar.h \
+  ..\..\..\..\..\platform\common\include\at_types.h \
+  D:\keil5\KEIL5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
+  D:\keil5\KEIL5\ARM\ARMCLANG\Bin\..\include\stdint.h \
+  D:\keil5\KEIL5\ARM\ARMCLANG\Bin\..\include\stddef.h \
+  ..\..\..\..\..\platform\drivers\include\radar_adc.h \
+  ..\..\..\..\..\platform\common\include\at_common.h \
+  ..\..\..\..\..\platform\common\include\at_types.h \
+  ..\..\..\..\..\platform\common\include\at_assert.h \
+  D:\keil5\KEIL5\ARM\ARMCLANG\Bin\..\include\stdio.h \
+  ..\..\..\..\..\platform\arch\arm\cmsis\CMSIS\Include\cmsis_compiler.h \
+  ..\..\..\..\..\platform\arch\arm\cmsis\CMSIS\Include\cmsis_armclang.h \
+  ..\..\..\..\..\platform\common\include\at_error.h \
+  ..\..\..\..\..\platform\common\include\at_sizes.h \
+  ..\..\..\..\..\platform\drivers\include\radar.h \
+  ..\..\..\..\..\platform\drivers\include\radar_frame.h \
+  ..\include\bw_5G\cfg_radar_profile.h

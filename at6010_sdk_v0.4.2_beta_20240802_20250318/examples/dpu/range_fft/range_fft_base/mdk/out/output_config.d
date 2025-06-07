@@ -1,0 +1,35 @@
+./out/output_config.o: ..\src\output_config.c ..\include\output_config.h \
+  D:\keil5\KEIL5\ARM\ARMCLANG\Bin\..\include\stdint.h \
+  ..\..\..\..\..\platform\drivers\include\clock.h \
+  ..\..\..\..\..\platform\common\include\at_common.h \
+  ..\..\..\..\..\platform\common\include\at_types.h \
+  D:\keil5\KEIL5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
+  D:\keil5\KEIL5\ARM\ARMCLANG\Bin\..\include\stddef.h \
+  ..\..\..\..\..\platform\common\include\at_assert.h \
+  D:\keil5\KEIL5\ARM\ARMCLANG\Bin\..\include\stdio.h \
+  ..\..\..\..\..\platform\arch\arm\cmsis\CMSIS\Include\cmsis_compiler.h \
+  ..\..\..\..\..\platform\arch\arm\cmsis\CMSIS\Include\cmsis_armclang.h \
+  ..\..\..\..\..\platform\common\include\at_error.h \
+  ..\..\..\..\..\platform\common\include\at_sizes.h \
+  ..\..\..\..\..\platform\hal\include\hal_dma.h \
+  ..\..\..\..\..\platform\arch\arm\chip\at6010\at6010.h \
+  ..\..\..\..\..\platform\arch\arm\cmsis\Device\ARM\CMSDK_CM0plus\Include\CMSDK_CM0plus.h \
+  ..\..\..\..\..\platform\arch\arm\cmsis\CMSIS\Include\core_cm0plus.h \
+  ..\..\..\..\..\platform\arch\arm\cmsis\CMSIS\Include\cmsis_version.h \
+  ..\..\..\..\..\platform\arch\arm\cmsis\CMSIS\Include\cmsis_compiler.h \
+  ..\..\..\..\..\platform\arch\arm\cmsis\CMSIS\Include\mpu_armv7.h \
+  ..\..\..\..\..\platform\arch\arm\cmsis\Device\ARM\CMSDK_CM0plus\Include\system_CMSDK_CM0plus.h \
+  ..\..\..\..\..\platform\arch\arm\chip\at6010\globals_macro.h \
+  ..\..\..\..\..\platform\arch\arm\chip\at6010\memory_map.h \
+  ..\..\..\..\..\platform\arch\arm\include\common.h \
+  ..\..\..\..\..\platform\common\include\at_types.h \
+  ..\..\..\..\..\platform\arch\arm\include\cpu.h \
+  ..\..\..\..\..\platform\hal\include\hal_def.h \
+  ..\..\..\..\..\platform\drivers\include\dma.h \
+  ..\..\..\..\..\platform\hal\include\hal_uart.h \
+  ..\..\..\..\..\platform\drivers\include\uart.h \
+  ..\..\..\..\..\platform\hal\include\hal_dma.h \
+  ..\..\..\..\..\platform\drivers\include\gpio.h ..\include\clk_cfg.h \
+  ..\..\..\..\..\platform\hal\include\hal_spi.h \
+  ..\..\..\..\..\platform\drivers\include\spi.h \
+  ..\..\..\..\..\platform\arch\arm\chip\at6010\memory_map.h

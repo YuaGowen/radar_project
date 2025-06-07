@@ -1,0 +1,371 @@
+/*
+ * FreeRTOS+CLI V1.0.4
+ * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * http://www.FreeRTOS.org
+ * http://aws.amazon.com/freertos
+ *
+ * 1 tab == 4 spaces!
+ */
+
+#ifndef _FREERTOS_CLI_H
+#define _FREERTOS_CLI_H
+
+/* Standard includes. */
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include "atlog.h"
+#include <errno.h>
+
+/* FreeRTOS includes. */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+#include "uart.h"
+
+#define fflush(NULL)
+
+/**
+ * @addtogroup Middleware
+ * @{
+ */
+
+/**
+ * @brief Command Line Interface
+ * @defgroup cli Command Line Interface
+ * @{
+ */
+
+/**
+ * @brief CLI Data Structures
+ * @defgroup cli_data CLI Data Structures
+ * @ingroup cli
+ * @{
+ */
+
+/**
+ * @cond INTERNAL_HIDDEN
+ */
+
+/* @brief Dimensions the buffer into which input characters are placed. */
+#define cmdMAX_INPUT_SIZE               64
+#define cmdMAX_CMD_CNT                  8
+
+/**
+ * @brief Stack size of CLI task.
+ */
+#define FREERTOS_CLI_TASK_STACKSIZE     512 /* StackType_t is uint32_t */
+
+/**
+ * @brief Priority of CLI task.
+ */
+#define TASK_PRIORITY_CLI               3
+
+/**
+ * @brief Max argv number for TAB.
+ */
+#define SUBCMD_NUM                      16
+
+/**
+ * @brief 7-bit ASCII codes
+ */
+#define cmdASCII_ETX                    0x03 /* End of text (^C) */
+#define cmdASCII_BS                     0x08 /* Backspace (^H) */
+#define cmdASCII_ESC                    0x1b /* Escape (^[) */
+#define cmdASCII_LBRACKET               0x5b /* Left bracket ([) */
+#define cmdASCII_DEL                    0x7F /* DEL acts as a backspace. */
+
+/**
+ * @endcond
+ */
+
+/**
+ * @typedef cli_subcmd_handler
+ * @brief Callback type of cli subcmd processing function.
+ *
+ * The prototype to which callback functions used to process command line
+ * subcommands must comply.
+ *
+ * @param argc
+ * The number of input parameters gets from console.
+ *
+ * @param argv
+ * The input parameters get from console.
+ *
+ */
+typedef int (*cli_subcmd_handler)(size_t argc, char **argv);
+
+/**
+ * @struct cli_subcmd
+ * @brief Structure CLI subcommand struct.
+ *
+ * @param subcmd
+ * Subcommand syntax strings
+ *
+ * @param help
+ * Subcommand help string
+ *
+ * @param handler
+ * Handler function of subcommand
+ */
+typedef struct cli_subcmd {
+	const char *subcmd;
+	const char *help;
+	cli_subcmd_handler handler;
+} cli_subcmd_t;
+
+/**
+ * @typedef pdCOMMAND_LINE_CALLBACK
+ * @brief Callback type of cli processing function.
+ *
+ * The prototype to which callback functions used to process command line
+ * commands must comply.
+ *
+ * @param pcWriteBuffer
+ * A buffer into which the output from executing the command can be written.
+ *
+ * @param xWriteBufferLen
+ * The length, in bytes of the pcWriteBuffer buffer.
+ *
+ * @param argc
+ * The number of input parameters(argv).
+ *
+ * @param argv
+ * The array of input parameter.
+ */
+typedef BaseType_t (*pdCOMMAND_LINE_CALLBACK)( char *pcWriteBuffer, size_t xWriteBufferLen, size_t argc, char **argv );
+
+/**
+ * @struct xCOMMAND_LINE_INPUT
+ * @brief The structure that defines command line commands.
+ *
+ * A command line command should be defined by declaring
+ * a const structure of this type.
+ *
+ * @param pcCommand
+ * The command that causes pxCommandInterpreter to be executed.
+ * For example "help".  Must be all lower case.
+ *
+ * @param pcSubcommand
+ * The subcommand needs to be registered in CLI (@ref cli_subcmd).
+ *
+ * @param pcHelpString
+ * String that describes how to use the command.  Should start with
+ * the command itself, and end with "\r\n". For example
+ * "help: Returns a list of all the commands\r\n".
+ *
+ * @param pxCommandInterpreter
+ * Commands expect a fixed number of parameters, which may be zero.
+ *
+ * @param cExpectedNumberOfParameters
+ * A pointer to the callback function that will return the output
+ * generated by the command.
+ */
+typedef struct xCOMMAND_LINE_INPUT
+{
+	const char * const pcCommand;
+	const struct cli_subcmd * const pcSubcommand;
+	const char * const pcHelpString;
+	const pdCOMMAND_LINE_CALLBACK pxCommandInterpreter;
+	int8_t cExpectedNumberOfParameters;
+} CLI_Command_Definition_t;
+/**
+ * @typedef CLI_Command_Definition_t
+ * @brief Define CLI_Command_Definition_t the xCOMMAND_LINE_INPUT type.
+ */
+
+/**
+ * @brief For backward compatibility,
+ * since CLI_Command_Definition_t used to be named as xCommandLineInput.
+ */
+#define xCommandLineInput CLI_Command_Definition_t
+
+/**
+ * @}
+ */
+
+/**
+ * @brief CLI APIs
+ * @defgroup cli_api CLI APIs
+ * @ingroup cli
+ * @{
+ */
+
+/**
+ * @cond INTERNAL_HIDDEN
+ */
+
+/**
+ * @brief The CLI commands process function.
+ *
+ * Commands in the registered list will be handled by this function.
+ * Once a command has been registered it can be executed from the command line.
+ * It is not reentrant and must not be called from more than one task - or at
+ * least - by more than one task at a time.
+ *
+ * @param pcCommandInput
+ * The input command string which will be processed in CLI.
+ *
+ * @param pcWriteBuffer
+ * The buffer which contains the output generated by running the command.
+ *
+ * @param xWriteBufferLen
+ * Indicate the size, in bytes, of the buffer pointed to by pcWriteBuffer.
+ *
+ * @retval 1 on success, 0 on failure.
+ * FreeRTOS_CLIProcessCommand should be called repeatedly until it returns pdFALSE(0).
+ */
+
+BaseType_t FreeRTOS_CLIProcessCommand( const char * const pcCommandInput, char * pcWriteBuffer, size_t xWriteBufferLen  );
+
+/**
+ * @brief Get output buffer of cli commands.
+ *
+ * A buffer into which command outputs can be written is declared in the
+ * main command interpreter, rather than in the command console implementation,
+ * to allow application that provide access to the command console via multiple
+ * interfaces to share a buffer, and therefore save RAM.  Note, however, that
+ * the command interpreter itself is not re-entrant, so only one command
+ * console interface can be used at any one time.  For that reason, no attempt
+ * is made to provide any mutual exclusion mechanism on the output buffer.
+ *
+ * @retval The address of the output buffer.
+ */
+char *FreeRTOS_CLIGetOutputBuffer( void );
+
+/**
+ * @brief Tab completion of cli.
+ *
+ * This function completes cli command while pressing tab key.
+ *
+ * @param pcCommandInput
+ * The input string fom console.
+ *
+ * @param pcWriteBuffer
+ * A buffer into which the output from executing the command can be written.
+ *
+ * @param xWriteBufferLen
+ * The length, in bytes of the pcWriteBuffer buffer.
+ *
+ * @retval The number of command found in register commands.
+ */
+uint8_t cli_tab_completion(const char * const pcCommandInput, char * pcWriteBuffer, size_t xWriteBufferLen);
+
+/**
+ * @brief find the common str func.
+ *
+ * This function finds the common str in tab options.
+ *
+ * @param pcCommandInput
+ * The input string fom console.
+ *
+ * @param pcWriteBuffer
+ * A buffer into which the output from executing the command can be written.
+ *
+ * @param xWriteBufferLen
+ * The length, in bytes of the pcWriteBuffer buffer.
+ *
+ * @retval The number of common char number in the tab options.
+ */
+uint8_t find_common_str(const char * const pcCommandInput, char * pcWriteBuffer, char * com_str, size_t xWriteBufferLen);
+
+
+/**
+ * @brief The register API of CLI.
+ *
+ * This function is called by module which wants to register command in cli.
+ *
+ */
+void vRegisterSampleCLICommands( void );
+
+/**
+ * @brief Init function of cli.
+ */
+void cli_init( void );
+
+/**
+ * @endcond
+ */
+
+/**
+ * @brief Register the command passed in using the pxCommandToRegister parameter.
+ *
+ * Registering a command adds the command to the list of commands that are
+ * handled by the command interpreter.  Once a command has been registered it
+ * can be executed from the command line.
+ *
+ * @param pxCommandToRegister
+ * The structure that defines command line commands,
+ * while should be registered to CLI.
+ *
+ * @retval 1 on success, 0 on failure.
+ */
+BaseType_t FreeRTOS_CLIRegisterCommand( const CLI_Command_Definition_t * const pxCommandToRegister );
+
+/**
+ * @brief Get the parameter of command.
+ *
+ * This function provide to query the input parameter of cli command.
+ *
+ * @param pcCommandString The command string.
+ *
+ * @param uxWantedParameter Wanted parameter number.
+ *
+ * @param pxParameterStringLength The parameter string length.
+ *
+ * @retval A pointer to the xParameterNumber'th word in pcCommandString.
+ */
+const char *FreeRTOS_CLIGetParameter( const char *pcCommandString, UBaseType_t uxWantedParameter, BaseType_t *pxParameterStringLength );
+
+/**
+ * @brief Convert the input string to arguments.
+ *
+ * This function converts the input string to seperate arguments.
+ *
+ * @param argc
+ * To store the argument number.
+ *
+ * @param argv
+ * To store the argument.
+ *
+ * @param cmd
+ * The input string fom console.
+ *
+ * @param max_argc
+ * The max number of arguments.
+ *
+ * @retval 0 on success, non-zero on failure.
+ */
+char cli_make_argv(size_t *argc, char **argv, char *cmd, unsigned char max_argc);
+
+/**
+ * @}
+ */
+
+/**
+ * @}
+ */
+
+/**
+ * @}
+ */
+#endif /*_FREERTOS_CLI_H */
