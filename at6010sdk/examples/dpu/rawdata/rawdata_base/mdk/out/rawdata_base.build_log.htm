@@ -1,0 +1,88 @@
+<html>
+<body>
+<pre>
+<h1>�Vision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: ��Vision V5.28.0.0
+Copyright (C) 2019 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: 1 1, 1, LIC=BL201-CLUID-ZDSK6-D80ET-QS643-3PYMB
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Professional  Version: 5.28.0.0
+Toolchain Path:  D:\keil5\KEIL5\ARM\ARMCLANG\Bin
+C Compiler:      ArmClang.exe V6.12
+Assembler:       Armasm.exe V6.12
+Linker/Locator:  ArmLink.exe V6.12
+Library Manager: ArmAr.exe V6.12
+Hex Converter:   FromElf.exe V6.12
+CPU DLL:         SARMCM3.DLL V5.28.0.0
+Dialog DLL:      DARMCM1.DLL V1.19.2.0
+Target DLL:      Segger\JL2CM3.dll V2.99.36.0
+Dialog DLL:      TARMCM1.DLL V1.14.1.0
+ 
+<h2>Project:</h2>
+D:\radar_project\at6010_sdk_v0.4.2_beta_20240802_20250318\examples\dpu\rawdata\rawdata_base\mdk\rawdata_base.uvprojx
+Project File Date:  05/28/2025
+
+<h2>Output:</h2>
+*** Using Compiler 'V6.12', folder: 'D:\keil5\KEIL5\ARM\ARMCLANG\Bin'
+Build target 'BW_5G'
+assembling startup_CMSDK_CM0plus.s...
+compiling system_CMSDK_CM0plus.c...
+compiling hal_clock.c...
+compiling radar_cfg_hal.c...
+compiling retarget.c...
+compiling hal_dualtimer.c...
+compiling hal_fft.c...
+compiling hal_uart.c...
+../src/rawdata_base_main.c(850): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+        printf("%s<B7><E5> %u: <C6><F0>ʼλ<D6><C3>=%u, <D6><D5>ֹλ<D6><C3>=%u, <D7><EE><B4><F3>ֵ=%f, <D7><EE><B4><F3>ֵλ<D6><C3>=%u,<BE><E0><C0><EB>=%f cm,<CB>ٶ<C8>=%f m\\s,<BD>Ƕ<C8>=%f<B6><C8>\n",
+                  ^~~~~~~~     ~~~~~~~~  ~~~~~~~~     ~~~~~~~~ ~~~~~~~~     ~~~~~~~~~~~~~~~~     ~~~~~~~~~~~~~~~~ ~~~~~~~~    ~~~~~~~~~~~~~~~~       ~~~~ ~~~~
+../src/rawdata_base_main.c(850): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+        printf("%s<B7><E5> %u: <C6><F0>ʼλ<D6><C3>=%u, <D6><D5>ֹλ<D6><C3>=%u, <D7><EE><B4><F3>ֵ=%f, <D7><EE><B4><F3>ֵλ<D6><C3>=%u,<BE><E0><C0><EB>=%f cm,<CB>ٶ<C8>=%f m\\s,<BD>Ƕ<C8>=%f<B6><C8>\n",
+                                                                                                                                                                       ^~~~ ~~~~   ~~~~~~~~
+../src/rawdata_base_main.c(859): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+        printf("%s<B7><E5> %u: <C6><F0>ʼλ<D6><C3>=%u, <D6><D5>ֹλ<D6><C3>=%u, <D7><EE><B4><F3>ֵ=%f, <D7><EE><B4><F3>ֵλ<D6><C3>=%u,ȫ<BE><D6><D7><EE><B4><F3>ֵ=%f,ȫ<BE><D6><D7><EE><B4><F3>ֵλ<D6><C3>=%u,<CB>ٶ<C8>=%f m/s\n",
+                  ^~~~~~~~     ~~~~~~~~  ~~~~~~~~     ~~~~~~~~ ~~~~~~~~     ~~~~~~~~~~~~~~~~     ~~~~~~~~~~~~~~~~ ~~~~~~~~     ~~~~~~~~~~~~~~~~~~~~~~~~     ~~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~    ~~~~ ~~~~
+../src/rawdata_base_main.c(1131): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+                        printf("<CC><EC><CF><DF> %d: I = %d, Q = %d, <CF><E0>λ = %.2f <B6><C8>\n", rx, I, Q, phase[rx] * 180.0 / PI);
+                                ^~~~~~~~~~~~~~~~                     ~~~~~~~~         ~~~~~~~~
+../src/rawdata_base_main.c(1143): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
+        printf("<CC><EC><CF><DF> %d <BA><CD> %d ֮<BC><E4><B5><C4><CF><E0>λ<B2><EE> = %.2f <B6><C8>\n", i, i+1, phase_diff * 180.0 / PI);
+                ^~~~~~~~~~~~~~~~    ~~~~~~~~    ~~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~        ~~~~~~~~
+5 warnings generated.
+compiling rawdata_base_main.c...
+compiling at6010_clock.c...
+compiling hal_radar.c...
+compiling hal_timer.c...
+compiling at6010_dualtimer.c...
+compiling at6010_uart.c...
+compiling hal_dma.c...
+compiling hal_spi.c...
+compiling at6010_irq.c...
+compiling at6010_gpio.c...
+compiling cpu-at601x.c...
+compiling at6010_timer.c...
+compiling frame_header.c...
+compiling output_config.c...
+linking...
+Program Size: Code=28164 RO-data=2128 RW-data=91332 ZI-data=21600  
+FromELF: creating hex file...
+After Build - User command #1: D:\keil5\KEIL5\\ARM\ARMCLANG\bin\fromelf.exe --bin -o "D:\radar_project\at6010_sdk_v0.4.2_beta_20240802_20250318\examples\dpu\rawdata\rawdata_base\mdk\out\rawdata_base.bin" "D:\radar_project\at6010_sdk_v0.4.2_beta_20240802_20250318\examples\dpu\rawdata\rawdata_base\mdk\out\rawdata_base.axf"
+".\out\rawdata_base.axf" - 0 Error(s), 5 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: Airtouch
+                
+                Airtouch.AT60xx.0.1.0
+                AT60xx Arm Cortex-M0+ Device Family Pack
+
+<h2>Collection of Component include folders:</h2>
+  .\RTE\_BW_5G
+
+<h2>Collection of Component Files used:</h2>
+Build Time Elapsed:  00:00:13
+</pre>
+</body>
+</html>
