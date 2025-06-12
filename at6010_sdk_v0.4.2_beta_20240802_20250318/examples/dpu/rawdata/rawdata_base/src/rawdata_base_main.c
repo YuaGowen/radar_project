@@ -245,6 +245,9 @@ adc_rdat_para_t GtIfSampleCfg = {
     .half_int_en = 0, /* 1=使能双帧缓存交替存放采集结果,0=禁能双帧缓存交替存放采集结果 */
 };
 
+#define PI 3.14159265358979323846
+double window[SAMPLES] = {0};
+short  adc_value[SAMPLES] = {0};
 /*********************************************************************************************************
 * 函数名：adc_rdat_handle
 * 描述：  中频数据（一帧）处理函数，在此函数中将数据排列成硬件FFT加速器所需的顺序要求,并触发1D FFT运算
@@ -264,7 +267,11 @@ ATTR_RAM_SECTION void adc_rdat_handle (void *pvBuf)
     for (i = 0; i < RX_ANTS; i++) {
         for (j = 0; j < CHIRPS; j++) {
             for (k = 0; k < SAMPLES; k++) {
-                GsFrame[i][j][k] = (*sIfAdc)[j][k][i];
+                GsFrame[i][j][k] = ((*sIfAdc)[j][k][i] ) ;//* window[k];- adc_value[k]
+//								if(i == 0 && j == 0)
+//								{
+//									adc_value[k] = (*sIfAdc)[j][k][i];
+//								}
             }
         }
     }
@@ -393,6 +400,7 @@ ATTR_RAM_SECTION unsigned long GetTickCount (void)
     return uwTick;
 }
 
+
 #define MAX_REGIONS 1
 #define DEBUG   0
 #define USE_PC_SOFT 0
@@ -419,13 +427,6 @@ void checkEndianness() {
 
 //frameN14：
 int16 fileData_temp[2*FFTN_RB * CHIRPS * RX_ANTS] = 
-//{
-//	0, -9315, 0, -9320, 0, -9359, 0, -9348, 0, -9310, 0, -9420, -926, 3738, -980, 3801, -308, 2134, -303, 2091, 369, -1035, 397, -1015, -196, -378, -194, -327, 586, -25, 637, -61, -784, 1107, -859, 1106, 489, -1711, 496, -1697, -153, 920, -163, 939, 504, -238, 494, -259, -788, 378, -756, 303, 480, -285, 480, -248, 551, -254, 112, -171, 115, -176, 105, -196, 
-//142, -207, 14, -127, 71, -90, 159, -187, -615, 628, -630, 679, -611, 668, -629, 727, -615, 698, -611, 652, 662, -795, 641, -808, -65, 586, -36, 557, -406, -191, -400, -136, 388, -344, 360, -337, -284, 415, -261, 330, 314, -112, 265, -12, -242, -134, -232, -181, 245, 42, 312, 65, -523, 454, -587, 439, 97, -420, 92, -408, 991, -393, 1052, -370, 
-//-151, 2718, -161, 2633, -2512, -3573, -2570, -3464, 2525, 385, 2519, 271, -754, 1228, -676, 1299, 393, -127, 340, -181, -753, -267, -763, -206, 518, -62, 600, -130, 799, -105, 648, -68, -799, 483, -658, 491, -677, -174, -667, -129, 554, -224, 439, -303, 593, 10, 685, 67, -807, 512, -875, 514, 667, -435, 728, -488, -681, -218, -698, -203, 858, 838, 823, 884, 
-//-995, -983, -953, -1014, 723, 507, 680, 506, -746, -25, -702, -63, 615, 133, 577, 160, -152, -293, -85, -215, 214, -93, 102, -168, 65, 183, 118, 162, -502, -79, -407, -14, 381, 236, 218, 188, -75, 33, 6, 15, -161, -199, -124, -120, 199, -70, 110, -170, -243, 115, -184, 161, 164, 30, 141, 70, -24, 30, 91, -23, 112, -102, -84, -38
-//};
-
 {
 0, 382, -6, 6, -3, 3, -3, 3, -1, 3, 0, 1, 0, 2, -1, 2, 
 0, 2, 1, 2, 0, 2, 0, 1, 1, 3, 3, 3, 3, 3, 6, 6, 
@@ -813,7 +814,7 @@ typedef struct {
 #define PEAK_FILL 4
 #define MAX_DECREASE 5
 #define NORMAL_MAX_VALUE  3
-#define THRES				  	2
+#define THRES				  	4
 /* 峰的参数 */
 typedef struct {
 	PeakDef peaks[PEAKS_NUM_MAX];
@@ -826,8 +827,8 @@ typedef struct {
 
 PeakFiner FiderPeakStatue = {0};
 PeakFiner FiderVPeakStatue = {0};
-	double dres = 3.22;//cm
-	double vres = 2.350;//m/s
+double dres = 3.22*2;//cm
+double vres = 2.350;//m/s
 // 打印峰的信息
 void PrintPeaks(PeakFiner *peakFiner,double res ,char * str) {
 	//    for (uint8_t i = 0; i < peakFiner->peak_count; i++) {
@@ -944,7 +945,7 @@ void findMaxMagnitudeIndex(uint32_t* fileData, uint16_t n_chirps, uint16_t chirp
                 int16_t Q = (int16_t)(fileData[index] >> 16); // 提取高 16 位作为 Q
 							
 								// 打印当前 Range Bin 的实部和虚部
-								 printf("Chirp %d, RX %d, RB %d: I = %d, Q = %d\n", chirp, rx, rb, I, Q);							
+								 //printf("Chirp %d, RX %d, RB %d: I = %d, Q = %d\n", chirp, rx, rb, I, Q);							
 
                 // 创建复数
                 Complex c = {I, Q};
@@ -980,21 +981,25 @@ void findMaxMagnitudeIndex(uint32_t* fileData, uint16_t n_chirps, uint16_t chirp
 	//								// 保存当前 Range Bin 的幅值
 	//                magnitudes[rb] = magnitude;
             }
-
-						DiffCalc(magnitudes_sqr, DIFF_OFFSET, chirpRbCn, diff, 
-							&FiderPeakStatue.max_value, &FiderPeakStatue.average_value, &FiderPeakStatue.max_value_index);
-
-						LocalHeadTailCalc(magnitudes_sqr, &FiderPeakStatue.peak_count, FiderPeakStatue.thres, chirpRbCn, diff, FiderPeakStatue.peaks, 2,chirpRbCn-5);				
 						
- 
-						if(maxMagnitude > 0)
+						if(rx == 0)
 						{
-							if(!FiderPeakStatue.peak_count)
-								FiderPeakStatue.peak_count++;
-							FiderPeakStatue.max_value_index = maxIndex;
-							FiderPeakStatue.max_value = maxMagnitude;
+							DiffCalc(magnitudes_sqr, DIFF_OFFSET, chirpRbCn, diff, 
+								&FiderPeakStatue.max_value, &FiderPeakStatue.average_value, &FiderPeakStatue.max_value_index);
+
+							LocalHeadTailCalc(magnitudes_sqr, &FiderPeakStatue.peak_count, FiderPeakStatue.thres, chirpRbCn, diff, FiderPeakStatue.peaks, 2,chirpRbCn-5);				
+							
+	 
+//							if(maxMagnitude > 0)
+//							{
+//								if(!FiderPeakStatue.peak_count)
+//									FiderPeakStatue.peak_count++;
+//								FiderPeakStatue.max_value_index = maxIndex;
+//								FiderPeakStatue.max_value = maxMagnitude;
+//							}
+							
 						}
-						
+
 						#if DEBUG_RANGE_BIN
 						// 打印当前 chirp 的所有 Magnitude
             printf("Chirp %d, RX %d: Magnitudes = [", chirp, rx);
@@ -1103,7 +1108,7 @@ void findVbMaxMagnitudeIndex(uint32_t* fileData, uint16_t n_chirps, uint16_t chi
 		#endif
 }
 
-#define PI 3.14159265358979323846
+
 //获取角度信息
 double findAngleStatue(uint32_t* fileData, uint16_t n_chirps, uint16_t chirpRbCn, uint8_t n_RX,
 	uint16_t n_chirps_num, uint16_t chirpRbCn_num)
@@ -1145,7 +1150,17 @@ double findAngleStatue(uint32_t* fileData, uint16_t n_chirps, uint16_t chirpRbCn
     estimated_angle = asin(phase_diff * lambda / ( 2 * PI * d ));
     
     // 将弧度转换为度
-    estimated_angle =  estimated_angle * 180.0 / PI;    
+    estimated_angle =  estimated_angle * 180.0 / PI;  
+  	if(estimated_angle > 0)
+		{
+			estimated_angle = 90 - estimated_angle;
+		}
+		else if(estimated_angle < 0)
+		{
+			estimated_angle += 90;
+			estimated_angle = -estimated_angle;
+		}
+		
     return estimated_angle;
 }
 
@@ -1191,6 +1206,13 @@ int main(void)
 		uart_cfg.fifo_cfg.fifo_en = 1;
 		(void)hal_uart_init(UART_ID_0, &uart_cfg);
 		#endif
+		
+		    // 生成Hanning窗序列
+    for (int n = 0; n < SAMPLES; n++) {
+        // MATLAB的hanning函数实现（对称窗）
+        window[n] = 0.5 * (1 - cos(2 * PI * n / (SAMPLES - 1)));
+    }
+		
     while(1) {
         if (ulFrameId != g_frame_id) { /* 已完成二阶FFT运算 */
 						#if 0
@@ -1226,7 +1248,7 @@ int main(void)
 						MAGTX magtx = {0};
 						double cur_distance = 0;
 						// 打印结果
-						PrintPeaks(&FiderPeakStatue,3.22,"range/velociy");
+						PrintPeaks(&FiderPeakStatue,dres,"range/velociy");
 					//	PrintVPeaks(&FiderVPeakStatue,2.350,"velociy");
 //						for (int i = 0; i < n_RX * n_chirps; i++) {			
 //							for(int j = 0; j < MAX_REGIONS; j++)
