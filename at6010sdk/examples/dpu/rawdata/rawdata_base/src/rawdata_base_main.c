@@ -404,8 +404,8 @@ ATTR_RAM_SECTION unsigned long GetTickCount (void)
 #define MAX_REGIONS 1
 #define DEBUG   0
 #define USE_PC_SOFT 0
-#define  DEBUG_RANGE_BIN (1)
-#define  DEBUG_VRANGE_BIN (1)
+#define  DEBUG_RANGE_BIN (0)
+#define  DEBUG_VRANGE_BIN (0)
 #define  TRESHOLD_VALUE  (-70)//2500000
 #define  VTRESHOLD_VALUE  (6)//2500000
 #define  START_INDEX  6
@@ -836,8 +836,15 @@ void PrintPeaks(PeakFiner *peakFiner,double res ,char * str) {
 	//        printf("%s峰 %u: 起始位置=%u, 终止位置=%u, 最大值=%f, 最大值位置=%u,全局最大值=%f,全局最大值位置=%u,距离=%fcm\n",
 	//               str,i + 1, peak->bulge_head, peak->bulge_tail, peak->extreme_value, peak->extreme_index,peakFiner->max_value,peakFiner->max_value_index,(peakFiner->max_value_index)*res);
 	//    }
+	
+		uint8_t send_buff[100] = {0xaa,0xaa,0xaa,0xaa,0x01,0x02,0x00,0x00,0x00,0x00,};
 		double speed = 0;
 		double angle = 0;
+		double distance = 0;
+		uint16 date_len =  peakFiner->peak_count*6;
+		send_buff[8] = (date_len & 0xFF);
+		send_buff[9] = ((date_len >> 8) & 0xFF);
+		uint8 offset  = 10;
 		for (uint8_t i = 0; i < peakFiner->peak_count; i++) {
         PeakDef *peak = &peakFiner->peaks[i];
 				uint16 speed_index =  FiderVPeakStatue.peaks[i].extreme_index;
@@ -847,10 +854,37 @@ void PrintPeaks(PeakFiner *peakFiner,double res ,char * str) {
 					speed = 0;
 				}	
 				angle = FiderPeakStatue.peaks[i].angle;
-        printf("%s峰 %u: 起始位置=%u, 终止位置=%u, 最大值=%f, 最大值位置=%u,距离=%f cm,速度=%f m\\s,角度=%f度\n",
-               str,i + 1, peak->bulge_head, peak->bulge_tail, peak->extreme_value, peak->extreme_index,(peak->extreme_index)*res,speed,angle);
+				distance = (peak->extreme_index)*res;
+				
+				uint16 temp_distance = (uint16)(distance*100);
+				send_buff[offset++] = (temp_distance & 0xFF);
+				send_buff[offset++] = ((temp_distance >> 8) & 0xFF);
+				
+			  int16 temp_speed = (int16)(speed*100);
+				send_buff[offset++] = (temp_speed & 0xFF);
+				send_buff[offset++] = ((temp_speed >> 8) & 0xFF);
+				
+				int16 temp_angle = (int16)(angle*100);
+				send_buff[offset++] = (temp_angle & 0xFF);
+				send_buff[offset++] = ((temp_angle >> 8) & 0xFF);	
+//        printf("%s峰 %u: 起始位置=%u, 终止位置=%u, 最大值=%f, 最大值位置=%u,距离=%f cm,速度=%f m\\s,角度=%f度\n",
+//               str,i + 1, peak->bulge_head, peak->bulge_tail, peak->extreme_value, peak->extreme_index,(peak->extreme_index)*res,speed,angle);
+//        printf("%s峰 %u: 起始位置=%u, 终止位置=%u, 最大值=%f, 最大值位置=%u,距离=%d cm,速度=%d m\\s,角度=%d度\n",
+//               str,i + 1, peak->bulge_head, peak->bulge_tail, peak->extreme_value, peak->extreme_index,temp_distance,temp_speed,temp_angle);
+				
     }
+		
+		uint8 check_sum = 0;
+		for(int i=4; i<offset; i++)
+		{
+			check_sum += send_buff[i];
+		}
+		
+		send_buff[offset++] = check_sum;
+		
+		output_port_send_data((u32)send_buff, offset);
 }
+
 
 // 打印峰的信息
 void PrintVPeaks(PeakFiner *peakFiner,double res ,char * str) {
@@ -1128,7 +1162,7 @@ double findAngleStatue(uint32_t* fileData, uint16_t n_chirps, uint16_t chirpRbCn
       phase[rx] = atan2(Q, I);
 			
 			// 打印每个天线的相位（转换为度）
-			printf("天线 %d: I = %d, Q = %d, 相位 = %.2f 度\n", rx, I, Q, phase[rx] * 180.0 / PI);
+			// printf("天线 %d: I = %d, Q = %d, 相位 = %.2f 度\n", rx, I, Q, phase[rx] * 180.0 / PI);
     }
     
 		double phase_diff = 0;
@@ -1140,7 +1174,7 @@ double findAngleStatue(uint32_t* fileData, uint16_t n_chirps, uint16_t chirpRbCn
         while (phase_diff > PI) phase_diff -= 2 * PI;
         while (phase_diff < -PI) phase_diff += 2 * PI;
         
-        printf("天线 %d 和 %d 之间的相位差 = %.2f 度\n", i, i+1, phase_diff * 180.0 / PI);
+        // printf("天线 %d 和 %d 之间的相位差 = %.2f 度\n", i, i+1, phase_diff * 180.0 / PI);
     }
 		
 		//基于相位差公式计算角度
@@ -1264,7 +1298,7 @@ int main(void)
 //								#endif
 //							}
 //						}
-						checkEndianness();	
+					//	checkEndianness();	
 						#endif
 												
             /* 帧率控制，帧间隔控制为200mS */
