@@ -134,7 +134,7 @@ extern "C" {
 	.rise_step_time     = 1U,     \
 	.rise_step_freq_khz = 568U,  \
 	.rise_step_num      = 4400U,  \
-	.gap_time           = 1010U   \
+	.gap_time           = 10100U   \
 }
 
 /**

@@ -244,7 +244,7 @@ adc_rdat_para_t GtIfSampleCfg = {
     .half_callback = 0, /* adc_rdat_half_isr,//中频采集结束回调函数，half_int_en = 1时，对应奇数数帧采集结束，half_int_en = 0时，此回调函数不会被调用 */
     .half_int_en = 0, /* 1=使能双帧缓存交替存放采集结果,0=禁能双帧缓存交替存放采集结果 */
 };
-
+#define  DIFF_ENABLE   (1)
 #define PI 3.14159265358979323846
 double window[SAMPLES] = {0};
 short  adc_value[SAMPLES] = {0};
@@ -259,23 +259,37 @@ ATTR_RAM_SECTION void adc_rdat_handle (void *pvBuf)
 {
     int i = 0, j = 0, k = 0;
     short (*sIfAdc)[CHIRPS][SAMPLES][RX_ANTS] = (short (*)[CHIRPS][SAMPLES][RX_ANTS])pvBuf;
-
+		static uint8 fram_counts = 0;
     radar_rf_pwr_off(); /* 为降低功耗，采集完中频后可以暂时关闭RF RX相关电源 */
 
     #if ((DUMP_TYPE == DUMP_RANGE) || (DUMP_TYPE == DUMP_VELOC))
     /* 将数据排列成硬件FFT加速器所需的顺序要求 */
     for (i = 0; i < RX_ANTS; i++) {
         for (j = 0; j < CHIRPS; j++) {
-            for (k = 0; k < SAMPLES; k++) {
-                GsFrame[i][j][k] = ((*sIfAdc)[j][k][i] ) ;//* window[k];- adc_value[k]
-//								if(i == 0 && j == 0)
-//								{
-//									adc_value[k] = (*sIfAdc)[j][k][i];
-//								}
+            for (k = 0; k < SAMPLES; k++) {							
+								if(j == 0)
+								{
+									GsFrame[i][j][k] =  ((*sIfAdc)[j][k][i] ) - adc_value[k];//((*sIfAdc)[j][k][i] ) ;//* window[k];- adc_value[k]
+								}
+								else
+								{
+									GsFrame[i][j][k] =  ((*sIfAdc)[j][k][i]);
+								}
+								
+							  #if DIFF_ENABLE	
+								if(i == 0 && j == 0 && fram_counts % 5 == 0)
+								{
+									adc_value[k] = (*sIfAdc)[j][k][i];
+								}
+								#endif
             }
         }
     }
-
+		if(fram_counts % 5 == 0)
+		{
+			 fram_counts = 0;
+		}
+		fram_counts++;
     /* 初始化FFT引擎相关配置并触发1D FFT运算 */
     hal_fft_set_config(FFT_IDX_CONFIG_USER_WIN, (void *)&GtRangeWin); /* 初始化FFT窗序列配置 */
     hal_fft_set_config(FFT_IDX_CONFIG_USER_FFT,(void*)&GtRangeCfg); /* 按GtRangeCfg配置初始化FFT引擎 */
@@ -404,11 +418,14 @@ ATTR_RAM_SECTION unsigned long GetTickCount (void)
 #define MAX_REGIONS 1
 #define DEBUG   0
 #define USE_PC_SOFT 0
-#define  DEBUG_RANGE_BIN (0)
-#define  DEBUG_VRANGE_BIN (0)
+#define RADAR_SOFT  (1)
+#define  DEBUG_RANGE_BIN (1 & !RADAR_SOFT)
+#define  DEBUG_VRANGE_BIN (1& !RADAR_SOFT)
+#define  PRINTF_ENABLE    (1& !RADAR_SOFT)
 #define  TRESHOLD_VALUE  (-70)//2500000
 #define  VTRESHOLD_VALUE  (6)//2500000
 #define  START_INDEX  6
+
 // 定义一个函数来判断大小端
 int isLittleEndian() {
     uint32_t i = 1; // 设置一个32位的整数
@@ -815,6 +832,10 @@ typedef struct {
 #define MAX_DECREASE 5
 #define NORMAL_MAX_VALUE  3
 #define THRES				  	4
+#define RMOTE_FOV_THRED   70
+#define CLOSE_FOV_THRED   90
+#define REMOTE_DISTANCE   200
+
 /* 峰的参数 */
 typedef struct {
 	PeakDef peaks[PEAKS_NUM_MAX];
@@ -828,7 +849,7 @@ typedef struct {
 PeakFiner FiderPeakStatue = {0};
 PeakFiner FiderVPeakStatue = {0};
 double dres = 3.22*2;//cm
-double vres = 2.350;//m/s
+double vres = 0.2350;//m/s
 // 打印峰的信息
 void PrintPeaks(PeakFiner *peakFiner,double res ,char * str) {
 	//    for (uint8_t i = 0; i < peakFiner->peak_count; i++) {
@@ -836,15 +857,36 @@ void PrintPeaks(PeakFiner *peakFiner,double res ,char * str) {
 	//        printf("%s峰 %u: 起始位置=%u, 终止位置=%u, 最大值=%f, 最大值位置=%u,全局最大值=%f,全局最大值位置=%u,距离=%fcm\n",
 	//               str,i + 1, peak->bulge_head, peak->bulge_tail, peak->extreme_value, peak->extreme_index,peakFiner->max_value,peakFiner->max_value_index,(peakFiner->max_value_index)*res);
 	//    }
-	
+		static uint8 zero_counts = 0;
+		static  PeakFiner peakFiner_temp = {0};
+		static uint8_t last_send_buff[100] = {0xaa,0xaa,0xaa,0xaa,0x01,0x02,0x00,0x00,0x00,0x00,};
+		static uint8_t last_offset = 0;
+//		if(peakFiner->peak_count)
+//		{
+//			zero_counts = 0;
+//			peakFiner_temp = (*peakFiner);
+//		}
+//		else
+//		{
+//			zero_counts++;
+//			if(zero_counts < 10)
+//			{
+//				*peakFiner = peakFiner_temp;
+//			}
+//			else
+//			{
+//				zero_counts = 10;
+//			}
+//		}
+
 		uint8_t send_buff[100] = {0xaa,0xaa,0xaa,0xaa,0x01,0x02,0x00,0x00,0x00,0x00,};
 		double speed = 0;
 		double angle = 0;
 		double distance = 0;
 		uint16 date_len =  peakFiner->peak_count*6;
-		send_buff[8] = (date_len & 0xFF);
-		send_buff[9] = ((date_len >> 8) & 0xFF);
+
 		uint8 offset  = 10;
+		uint8 filter_counts = 0;
 		for (uint8_t i = 0; i < peakFiner->peak_count; i++) {
         PeakDef *peak = &peakFiner->peaks[i];
 				uint16 speed_index =  FiderVPeakStatue.peaks[i].extreme_index;
@@ -856,6 +898,24 @@ void PrintPeaks(PeakFiner *peakFiner,double res ,char * str) {
 				angle = FiderPeakStatue.peaks[i].angle;
 				distance = (peak->extreme_index)*res;
 				
+				
+				if(distance < REMOTE_DISTANCE)
+				{
+						if(fabs(angle) >  CLOSE_FOV_THRED)
+						{
+							filter_counts++;
+							continue;
+						}
+				}
+				else
+				{
+						if(fabs(angle) >  RMOTE_FOV_THRED)
+						{
+							filter_counts++;
+							continue;
+						}
+				}
+								
 				uint16 temp_distance = (uint16)(distance*100);
 				send_buff[offset++] = (temp_distance & 0xFF);
 				send_buff[offset++] = ((temp_distance >> 8) & 0xFF);
@@ -867,22 +927,47 @@ void PrintPeaks(PeakFiner *peakFiner,double res ,char * str) {
 				int16 temp_angle = (int16)(angle*100);
 				send_buff[offset++] = (temp_angle & 0xFF);
 				send_buff[offset++] = ((temp_angle >> 8) & 0xFF);	
-//        printf("%s峰 %u: 起始位置=%u, 终止位置=%u, 最大值=%f, 最大值位置=%u,距离=%f cm,速度=%f m\\s,角度=%f度\n",
-//               str,i + 1, peak->bulge_head, peak->bulge_tail, peak->extreme_value, peak->extreme_index,(peak->extreme_index)*res,speed,angle);
+				#if PRINTF_ENABLE
+        printf("%s峰 %u: 起始位置=%u, 终止位置=%u, 最大值=%f, 最大值位置=%u,距离=%f cm,速度=%f m\\s,角度=%f度\n",
+               str,i + 1, peak->bulge_head, peak->bulge_tail, peak->extreme_value, peak->extreme_index,(peak->extreme_index)*res,speed,angle);
 //        printf("%s峰 %u: 起始位置=%u, 终止位置=%u, 最大值=%f, 最大值位置=%u,距离=%d cm,速度=%d m\\s,角度=%d度\n",
 //               str,i + 1, peak->bulge_head, peak->bulge_tail, peak->extreme_value, peak->extreme_index,temp_distance,temp_speed,temp_angle);
-				
+				#endif
     }
 		
+		date_len = (peakFiner->peak_count - filter_counts)*6;
+		send_buff[8] = (date_len & 0xFF);
+		send_buff[9] = ((date_len >> 8) & 0xFF);
 		uint8 check_sum = 0;
 		for(int i=4; i<offset; i++)
 		{
 			check_sum += send_buff[i];
-		}
-		
+		}		
 		send_buff[offset++] = check_sum;
 		
+		if(date_len)
+		{
+			zero_counts = 0;
+			memcpy(last_send_buff,send_buff,offset);
+			last_offset = offset;
+		}
+		else
+		{
+			zero_counts++;
+			if(zero_counts < 10)
+			{
+				memcpy(send_buff,last_send_buff,100);
+				offset = last_offset;
+			}
+			else
+			{
+				zero_counts = 10;
+			}
+		}
+		
+		#if RADAR_SOFT
 		output_port_send_data((u32)send_buff, offset);
+		#endif
 }
 
 
@@ -1086,7 +1171,7 @@ void findVbMaxMagnitudeIndex(uint32_t* fileData, uint16_t n_chirps, uint16_t chi
 				int16_t Q = (int16_t)(fileData[index] >> 16); // 提取高 16 位作为 Q
 			
 				// 打印当前 Range Bin 的实部和虚部
-			 // printf("Chirp %d, RX %d, RB %d: I = %d, Q = %d\n", chirp, n_RX_num, chirpRbCn_num, I, Q);							
+			 // printf("VChirp %d, RX %d, RB %d: I = %d, Q = %d\n", chirp, n_RX_num, chirpRbCn_num, I, Q);							
 
 				// 创建复数
 				Complex c = {I, Q};
@@ -1131,7 +1216,7 @@ void findVbMaxMagnitudeIndex(uint32_t* fileData, uint16_t n_chirps, uint16_t chi
 		
 		#if DEBUG_VRANGE_BIN
 		// 打印当前 chirp 的所有 Magnitude
-		printf("chirpRbCn %d, RX %d: Magnitudes = [", chirpRbCn_num, n_RX_num);
+		printf("VchirpRbCn %d, RX %d: Magnitudes = [", chirpRbCn_num, n_RX_num);
 		for (int chirp = 0; chirp < n_chirps; chirp++) {	
 				printf("%.2f", magnitudes_sqr[chirp]);
 				if (chirp < n_chirps - 1) {
@@ -1162,7 +1247,7 @@ double findAngleStatue(uint32_t* fileData, uint16_t n_chirps, uint16_t chirpRbCn
       phase[rx] = atan2(Q, I);
 			
 			// 打印每个天线的相位（转换为度）
-			// printf("天线 %d: I = %d, Q = %d, 相位 = %.2f 度\n", rx, I, Q, phase[rx] * 180.0 / PI);
+			//printf("天线 %d: I = %d, Q = %d, 相位 = %.2f 度\n", rx, I, Q, phase[rx] * 180.0 / PI);
     }
     
 		double phase_diff = 0;
@@ -1174,7 +1259,7 @@ double findAngleStatue(uint32_t* fileData, uint16_t n_chirps, uint16_t chirpRbCn
         while (phase_diff > PI) phase_diff -= 2 * PI;
         while (phase_diff < -PI) phase_diff += 2 * PI;
         
-        // printf("天线 %d 和 %d 之间的相位差 = %.2f 度\n", i, i+1, phase_diff * 180.0 / PI);
+        //printf("天线 %d 和 %d 之间的相位差 = %.2f 度\n", i, i+1, phase_diff * 180.0 / PI);
     }
 		
 		//基于相位差公式计算角度
@@ -1272,7 +1357,7 @@ int main(void)
 						{
 							double angle = 0;
 							findVbMaxMagnitudeIndex((uint32_t*)GsVeloc, n_chirps, chirpRbCn, 0,FiderPeakStatue.peaks[peak_num].extreme_index);
-							angle = findAngleStatue((uint32_t*)GsVecIn, n_chirps, chirpRbCn,n_RX,	0, FiderPeakStatue.peaks[peak_num].extreme_index);
+							angle = findAngleStatue((uint32_t*)GsVecIn, n_chirps, chirpRbCn,n_RX,	1, FiderPeakStatue.peaks[peak_num].extreme_index);
 							FiderPeakStatue.peaks[peak_num].angle = angle;
 						}
 					
@@ -1305,7 +1390,7 @@ int main(void)
             do {
                 ulTmp = GetTickCount();
                 ulTmp = (ulTmp >= ulStamp)? (ulTmp - ulStamp) : (0xFFFFFFFFUL - ulStamp + ulTmp);
-            } while (ulTmp < 200);
+            } while (ulTmp < 100);
 
             radar_rf_pwr_on(); /* 若采集完中频后有关闭RF相关电源，则在此重新使能RF RX相关电源 */
             radar_frame_start(); /* 若RF扫频配置为单次触发，则每次扫频结束后需要重新调用此函数 */
